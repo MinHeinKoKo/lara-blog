@@ -6,8 +6,9 @@
 
 <p class="small text-black-50">Manage Posts</p>
 <div class="list-group mb-3">
-    <a href="{{ route('post.index') }}" class="list-group-item list-group-item-action">Post Lists</a>
     <a href="{{ route('post.create') }}" class="list-group-item list-group-item-action">Create Post</a>
+    <a href="{{ route('post.index') }}" class="list-group-item list-group-item-action">Post Lists</a>
+    <a href="{{ route('post.index' ,["trash"=>true]) }}" class="list-group-item list-group-item-action"> <i class="bi bi-trash3"></i> Trash</a>
 </div>
 
 <p class="small text-black-50">Manage Category</p>

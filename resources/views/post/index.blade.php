@@ -57,6 +57,7 @@
                             <td class="">{{ $post->user->name }}</td>
                             @endif
                             <td class="text-nowrap">
+                                @notrash
                                 <a href="{{route('post.show',$post->id)}}" class="btn btn-sm btn-outline-secondary">
                                     <i class="bi bi-info"></i>
                                 </a>
@@ -65,25 +66,39 @@
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 @endcan
+                                @endnotrash
                                 @can('delete',$post)
-                                <form action="{{ route('post.destroy',$post->id) }}" class="d-inline-block" method="post">
+                                    @trash
+                                <form action="{{ route('post.destroy',[$post->id, "delete"=>"force"]) }}" class="d-inline-block" method="post">
                                     @csrf
                                     @method('delete')
                                     <button class="btn btn-outline-danger btn-sm">
-                                        <i class="bi bi-trash3"></i>
+                                        <i class="bi bi-trash2-fill"></i>
                                     </button>
                                 </form>
+
+                                    <form action="{{ route('post.destroy',[$post->id, "delete"=>"restore"]) }}" class="d-inline-block" method="post">
+                                        @csrf
+                                        @method('delete')
+                                        <button class="btn btn-outline-dark btn-sm">
+                                            <i class="bi bi-recycle"></i>
+                                        </button>
+                                    </form>
+                                @else
+
+                                    <form action="{{ route('post.destroy',[$post->id, "delete"=>"soft"]) }}" class="d-inline-block" method="post">
+                                        @csrf
+                                        @method('delete')
+                                        <button class="btn btn-outline-dark btn-sm">
+                                            <i class="bi bi-trash3"></i>
+                                        </button>
+                                    </form>
+                                    @endtrash
                                 @endcan
+
                             </td>
                             <td>
-                                <p class="small text-black-50 mb-0 text-nowrap">
-                                    <i class="bi bi-calendar"></i>
-                                    {{ $post->created_at->format('d M Y') }}
-                                </p>
-                                <p class="small text-black-50 mb-0 text-nowrap">
-                                    <i class="bi bi-clock"></i>
-                                    {{ $post->created_at->format('H : i A') }}
-                                </p>
+                                {!! $post->time !!}
                             </td>
                         </tr>
                     @empty

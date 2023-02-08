@@ -14,6 +14,7 @@
             <div class="card-body">
                 <form action="{{ route('post.store') }}" method="post" enctype="multipart/form-data">
                     @csrf
+{{--                    <x-input name="title" label="Post Title" />--}}
                     <div class="mb-3">
                         <label for="title" class="form-label">Post Title</label>
                         <input type="text" id="title" value="{{ old('title') }}" class="form-control @error('title') is-invalid @enderror " name="title">

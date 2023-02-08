@@ -8,9 +8,11 @@ use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdatePostRequest;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use mysql_xdevapi\Exception;
 
 class PostController extends Controller
 {
@@ -21,13 +23,10 @@ class PostController extends Controller
      */
     public function index()
     {
-        $posts = Post::when(request('keyword'), function ($q){
-            $keyword = request('keyword');
-          $q->orWhere("title","like","%$keyword%")
-              ->orWhere("description","like","%$keyword%");
-        })
+        $posts = Post::search()
             ->when(Auth::user()->role === "author", fn($q)=> $q-> where("user_id",Auth::id()))
         ->latest("id")
+            ->when(request()->trash , fn($q) => $q -> onlyTrashed() )
             ->with(['category','user'])
             ->paginate(10)->withQueryString();
         return view('post.index' , compact('posts'));
@@ -51,7 +50,11 @@ class PostController extends Controller
      */
     public function store(StorePostRequest $request)
     {
-        //saving Posts
+        try {
+            DB::beginTransaction();
+
+
+            //saving Posts
         $post = new Post();
         $post->title = $request->title;
         $post->slug = Str::slug($request->title);
@@ -60,30 +63,38 @@ class PostController extends Controller
         $post->user_id = Auth::id();
         $post->category_id = $request->category;
 
-        if ($request->hasFile('feature_image')){
-            $newName = uniqid()."_feature_image.".$request->file('feature_image')->extension();
-            $request->file('feature_image')->storeAs('public',$newName);
-            $post->feature_image = $newName ;
+        if ($request->hasFile('feature_image')) {
+            $newName = uniqid() . "_feature_image." . $request->file('feature_image')->extension();
+            $request->file('feature_image')->storeAs('public', $newName);
+            $post->feature_image = $newName;
         }
 
         $post->save();
 
-        foreach ($request->photos as $photo){
-            $newName = uniqid()."_post_photo.".$photo->extension();
-            $photo->storeAs('public',$newName);
+
+        foreach ($request->photos as $photo) {
+            $newName = uniqid() . "_post_photo." . $photo->extension();
+            $photo->storeAs('public', $newName);
 
             $photo = new Photo();
             $photo->post_id = $post->id;
-            $photo->name = $newName ;
+            $photo->name = $newName;
             $photo->save();
         }
+
+        DB::commit();
+
+
+        }catch (Exception $error){
+            DB::rollBack();
+        }
+
 
         return redirect()->route('post.index')->with('status',$post->title." is created successfully");
     }
 
     /**
      * Display the specified resource.
-     *
      * @param  \App\Models\Post  $post
      * @return \Illuminate\Http\Response
      */
@@ -157,12 +168,17 @@ class PostController extends Controller
      * @param  \App\Models\Post  $post
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Post $post)
+    public function destroy($id)
     {
+        $post = Post::withTrashed()->findOrFail($id)->first();
+
         if ( Gate::denies('delete', $post)){
             return abort(403,"You are not allowed to delete This Post");
         }
         $name = $post->title;
+
+        if (request("delete") === "force"):
+
         if (isset($post->feature_image)){
             Storage::delete('public/'.$post->feature_image);
 
@@ -176,7 +192,22 @@ class PostController extends Controller
             $photo->delete();
         }
 
-        $post->delete();
-        return redirect()->route('post.index')->with('status',$name." is updated successfully");
+        Post::withTrashed()->findOrFail($id)->forcedelete();
+
+        $message = $name." is deleted successfully.";
+
+        elseif (request("delete") === "restore"):
+
+            Post::withTrashed()->findOrFail($id)->restore();
+            $message = $name." is restored successfully.";
+
+        else:
+
+            Post::withTrashed()->findOrFail($id)->delete();
+
+            $message = $name." is moved to Trash";
+
+        endif;
+        return redirect()->route('post.index')->with('status',$message);
     }
 }

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Post;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\App;
+
 //use Illuminate\Support\Facades\Auth;
 
 class PageController extends Controller
@@ -24,9 +26,17 @@ class PageController extends Controller
     }
     public function detail($slug)
     {
-        $post = Post::where("slug",$slug)->with(['user','category','photos'])->first();
+        $post = Post::where("slug",$slug)->with(['user','category','photos'])->firstOrFail();
+        $recentPosts = Post::latest("id")->limit(5)->get();
 //        return $post;
-        return view("detail",compact("post"));
+        return view("detail",compact("post","recentPosts"));
+    }
+
+    public function pdfDownload ($slug){
+        $post = Post::where("slug",$slug)->with(['user','category','photos'])->firstOrFail();
+        $pdf = App::make("dompdf.wrapper");
+        $pdf->loadHTML("<h1>$post->title</h1><div>$post->description</div>");
+        return $pdf->stream();
     }
 
     public function byCategoryPost($slug)

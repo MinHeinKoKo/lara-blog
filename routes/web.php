@@ -25,6 +25,8 @@ Route::get("/detail/{slug}",[PageController::class,'detail'])->name("page.detail
 
 Route::get("/cate/{slug}",[PageController::class, "byCategoryPost"])->name("page.category");
 
+Route::get('/detail-pdf/{slug}',[PageController::class,'pdfDownload'])->name("page.pdf");
+
 Auth::routes();
 
 Route::get('/home', [HomeController::class, 'index'])->name('home');
